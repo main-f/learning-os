@@ -1,9 +1,7 @@
 # Full PRD reference
 
-The personal product requirements document is maintained separately as:
+The authoritative personal requirements document is maintained outside this repository as:
 
-`Rae_Learning_OS_PRD_v0.2.1_2026-11-11.md`
+`Rae_Learning_OS_PRD_v0.3_2026-11-12.md`
 
-It contains personal profile and course context. Keep it in a **private** workspace, not this possibly-public web repository. To consult it locally, point the Codex study agent at a read-only private copy without committing it.
-
-This starter intentionally includes only the non-sensitive architecture and roadmap.
+It contains personal and course context and must remain in the private, read-only requirements workspace. This repository records only the minimum architecture and executable contracts needed by the v0.3 slice; it does not copy the full PRD.

@@ -59,9 +59,13 @@ def handle_message(chat_id: str, text: str) -> None:
             sid = str(uuid.uuid4())
             db.execute("INSERT INTO study_sessions VALUES (?,?,?,?,?,?)",(sid,row['id'],0,note,"study",timestamp))
             db.execute("UPDATE tasks SET status='completed',completed_at=? WHERE id=?",(timestamp,row['id']))
-            db.execute("INSERT INTO event_outbox VALUES (?,?,?,?)", (
-                str(uuid.uuid4()),"study.session_recorded",
-                json.dumps({"session_id":sid,"task_id":row['id'],"source":"telegram","self_reported":True}),timestamp))
+            event_id = str(uuid.uuid4())
+            db.execute("""INSERT INTO event_outbox(
+                id,type,payload_json,idempotency_key,schema_version,status,created_at)
+                VALUES(?,?,?, ?,1,'pending',?)""", (
+                event_id,"study.session_recorded",
+                json.dumps({"session_id":sid,"task_id":row['id'],"source":"telegram","self_reported":True}),
+                f"study.session_recorded:{event_id}",timestamp))
         send("漂亮，学习成果已记录！实际学习时长未核实；这不是官方成绩或能力评估。")
 
 

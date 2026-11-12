@@ -1,104 +1,74 @@
-# Rae Learning OS — isolated P0 starter
+# Rae Learning OS v0.3 — real private MCQ slice
 
-A **working starter prototype**, not the completed Learning OS. It deliberately does not modify or merge the existing `cybersecurity_codex` or Telegram lifestyle assistant projects.
+This repository now contains a local, playable vertical slice:
 
-See `docs/ADR-001-project-isolation.md` first. Full personal product requirements are kept outside this starter; see `docs/PRD_REFERENCE.md` (do not publish the personal PRD).
+`read-only course import → fixed private 10-question set → Speed Run → server scoring → SQLite → Dashboard + Personal Best`
 
-## Architecture
+The course repository remains an external read-only dependency. Real questions, answers, results, SQLite files, import reports, audio, and credentials are private runtime data and are ignored by Git.
 
-```text
-existing tg-box [UNCHANGED]  (optional future /study adapter)
+## Boundaries
 
-existing cybersecurity_codex [READ ONLY]
-          | local COURSE_ROOT
-          v
-rae-learning-os/
-  services/study_core/       FastAPI + SQLite + independent Study Telegram Bot
-  apps/web/                  React + Vite, /#/play and /#/dashboard
-  docs/                      requirements and boundaries
-  .github/workflows/pages.yml  MANUAL public-shell deploy only
-```
+- `cybersecurity_codex`: read-only `COURSE_ROOT`; never copied into the web bundle.
+- `health-monitor`: completely separate; its service, database, token, and port are untouched.
+- Study Core: loopback only at `127.0.0.1:8876` by default.
+- Official grade, Mastery, and game XP are independent. This slice keeps Official grade pending and Mastery unknown.
+- No Telegram delivery, NotebookLM call, TTS, authentication placeholder, or deployment is performed here.
 
-## 1. Start the local study API
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DATA_CONTRACTS.md](docs/DATA_CONTRACTS.md), and [docs/TEST_PLAN.md](docs/TEST_PLAN.md).
 
-On the always-on PC, create a Python virtualenv (Python 3.11+):
+## 1. Configure and import the private course bank
+
+Python 3.11+ is required. Start from `services/study_core`:
 
 ```bash
-cd services/study_core
-python -m venv .venv
-source .venv/bin/activate       # Windows PowerShell: .venv\\Scripts\\Activate.ps1
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-export LEARNING_OS_DB="$PWD/data/learning.sqlite"
-python -m uvicorn app.main:app --host 127.0.0.1 --port 8765
-```
-
-This intentionally listens on **127.0.0.1 only**. Do not port-forward 8765 or expose this unauthenticated prototype to the Internet.
-
-Try: `http://127.0.0.1:8765/health` and `http://127.0.0.1:8765/api/v1/summary`.
-
-## 2. Start the local web UI
-
-In a second terminal (Node 20+):
-
-```bash
-cd apps/web
-npm install
-npm run dev
-```
-
-Open `http://127.0.0.1:5173/#/dashboard` or `/#/play`. Vite proxies `/api` only while developing locally. The browser demo game is explicitly not an actual exam or proof of learning.
-
-## 3. Import existing course topic metadata, read-only
-
-```bash
-cd services/study_core
 export COURSE_ROOT=/absolute/path/to/cybersecurity_codex
 export LEARNING_OS_DB="$PWD/data/learning.sqlite"
 python -m app.import_topics
 ```
 
-This reads only the canonical `maso/NN-N_*.md` topic files. It records relative path and SHA-256, **not** the full content or academic score. The actual course question importer, answer validation and `GradeCalc.xlsx` tests are the next milestone.
+The importer reads only the 33 root `maso/NN-N_*.md` topics and the two locally saved MASO question pages. It performs no network access. The private `data/import_report.json` contains counts, IDs, and source paths, but no copied question text.
 
-## 4. Independent Study Telegram Bot (optional until credentials are available)
+## 2. Run Study Core
 
-Use BotFather to create a **new** bot, distinct from your lifestyle assistant. Get your own Telegram numeric chat ID through a trusted local method, and restrict the Bot to that chat. Set credentials **only on your local PC**; never commit them.
+```bash
+export LEARNING_OS_HOST=127.0.0.1
+export LEARNING_OS_PORT=8876
+python -m app.main
+```
+
+Health check: `http://127.0.0.1:8876/health`. The launcher rejects any host other than `127.0.0.1`.
+
+## 3. Run the React UI
+
+From `apps/web` (Node 20+):
+
+```bash
+npm ci
+export VITE_DEV_API_TARGET=http://127.0.0.1:8876
+npm run dev
+```
+
+Open `http://127.0.0.1:5173/#/play` or `/#/dashboard`. Real prompts and answers are fetched from the local API; none are hardcoded in source or generated public assets.
+
+## 4. Verify
 
 ```bash
 cd services/study_core
-export STUDY_TELEGRAM_BOT_TOKEN='YOUR_NEW_STUDY_BOT_TOKEN'
-export STUDY_TELEGRAM_ALLOWED_CHAT_ID='YOUR_NUMERIC_TELEGRAM_CHAT_ID'
-export LEARNING_OS_DB="$PWD/data/learning.sqlite"
-python -m app.study_bot
+COURSE_ROOT=/absolute/path/to/cybersecurity_codex .venv/bin/python -m pytest -q
+
+cd ../../apps/web
+npm run build
+
+cd ../../services/study_core
+.venv/bin/python -m app.audit_public_build \
+  --dist ../../apps/web/dist \
+  --database data/learning.sqlite
+
+cd ../..
+git diff --check
 ```
 
-Commands: `/today` (send next pending task), `/done <what you actually did>` (self-reported task completion). Separate process and database mean the existing lifestyle assistant remains intact.
-
-To send one reminder from the host PC scheduler:
-
-```bash
-python -m app.notify_today
-```
-
-Use host `cron`, macOS `launchd` or Windows Task Scheduler. Schedule reminders *and AI planner* separately. The starter doesn't enable recurring schedules automatically.
-
-## 5. Run tests
-
-```bash
-cd services/study_core
-pip install pytest httpx
-python -m pytest -q
-```
-
-## Public GitHub Pages caveat
-
-The manual GitHub Pages workflow deploys **only the web UI**, which defaults to demonstration mode in production. GitHub Pages is public even when the repository is private under eligible plans. Never publish SQLite, real grades, source PDFs, tokens or recordings without reviewing sharing rights. Real mobile read/write sync needs authenticated backend, not directly writing into GitHub Pages.
-
-## Build verification
-
-Backend automated tests pass. Frontend installation/build could not be verified in the sandbox because package registry access timed out; run `npm install && npm run build` on your own PC before any Pages deployment.
-
-## What this starter doesn't do yet
-
-It does **not** connect NotebookLM, produce daily podcasts, calculate Grade 5 predictions, automatically update from external Codex chats, or implement auth/remote database synchronization. Those are P1/P2 milestones in `docs/ROADMAP.md`.
-
-For prompt safety, a future background `codex exec` job should use a separate work directory and restricted sandbox. Review `docs/ADR-001-project-isolation.md` before setting up unattended jobs.
+The real integration test compares `cybersecurity_codex` Git status before and after import. Do not publish `dist` as a working private app: without a separately designed authenticated API it is only a static shell.

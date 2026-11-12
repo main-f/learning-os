@@ -6,6 +6,9 @@ export default defineConfig({
   base: process.env.VITE_BASE_PATH || '/',
   server: {
     host: '127.0.0.1',
-    proxy: { '/api': 'http://127.0.0.1:8765', '/health': 'http://127.0.0.1:8765' },
+    proxy: {
+      '/api': process.env.VITE_DEV_API_TARGET || 'http://127.0.0.1:8876',
+      '/health': process.env.VITE_DEV_API_TARGET || 'http://127.0.0.1:8876',
+    },
   },
 });

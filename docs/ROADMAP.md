@@ -1,27 +1,8 @@
-# Implementation roadmap
+# v0.3 implementation roadmap
 
-**Vertical slice P0 (included here)**
-- Local SQLite schema and FastAPI API with task + session records.
-- Read-only importer for flat `maso/*.md` topic metadata, no automatic quiz answers.
-- Distinct Study Bot with `/today` + `/done` and one-way scheduled reminders.
-- React/Vite local dashboard and tiny clearly-labelled demo game.
-- Automated API tests. GitHub Pages deployment workflow is manual, publishing public UI only.
+1. **P0-A — Real question import and source verification.** Read-only Markdown parsing, saved-page reconciliation, private report, and a deterministic 10-question set.
+2. **P0-B — Speed Run, streak, XP, and Personal Best.** Server-authoritative scoring; correctness ranks before speed; XP remains non-academic.
+3. **P0-C — SQLite and Dashboard.** Immutable attempts, idempotent completion, recent result, same-version Personal Best, and explicit unknown academic state.
+4. **P0-D — Later Telegram private deep link.** A separate Study Bot may open the private challenge only after access and token boundaries are approved.
 
-**P1 (implement before real private mobile use)**
-- Identity-protected private data API (BaaS with user-level authorization or secured tunnel); cross-device event sync with ID, UTC timestamp, idempotency, queue retries, conflict policy.
-- Initial diagnostic test using verified course questions; source citations; item bank dedup + rubric approval.
-- A real course task planner reading current dates, actual syllabus, realistic time budget and sleep constraints.
-- Manual evidence grading; deterministic exam grade calculator imported from `GradeCalc.xlsx` with tests against actual current rubric.
-
-**P2**
-- Audio pipeline from existing A–H prompt library; NotebookLM best-effort adapter with TTS fallback, audio storage, mobile player, background playback testing, saved position; authentication and access controls.
-- Time trial, streak, personal best, difficulty, delayed retrieval, error analysis and adaptive questions.
-- Two- or three-times-daily orchestration and Telegram gentle escalation; no night-time pressure.
-
-**P3**
-- Optional lifestyle bot bridge, independent permissions. Optional wearables and calendar only with explicit consent.
-
-**Non-goals**
-- Not a background process running in this generated ZIP.
-- Not a production-ready public API or finished authenticated website.
-- Does not automate official course submissions or create fictional official grades.
+After P0-D, candidates are human review of explanations, NotebookLM production/player work, and later adaptive modes. Boss Battle, knowledge tree, remote auth, GradeCalc, multiplayer ranking, and public deployment are outside the current slice.
