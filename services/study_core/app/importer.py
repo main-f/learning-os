@@ -23,7 +23,7 @@ from .database import connect, get_db_path, initialize
 
 COURSE_ID = "cyber-security"
 FIRST_QUESTION_SET_ID = "cyber-security-exam1-speed-run"
-RULESET_VERSION = "1"
+RULESET_VERSION = "2"
 QUESTION_SET_SIZE = 10
 TOPIC_PATTERN = re.compile(r"^(?P<topic>[0-9]{2}-[0-9])_.+\.md$")
 QUESTION_HEADING = re.compile(r"(?m)^## Q(?P<number>[0-9]+)\s*$")

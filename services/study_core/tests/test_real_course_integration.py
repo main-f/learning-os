@@ -40,21 +40,27 @@ def test_real_course_counts_and_read_only_status(tmp_path, monkeypatch):
         started = client.post("/api/v1/game-sessions/start", json={})
         assert started.status_code == 201
         game = started.json()
-        assert "correct_options" not in json.dumps(game)
+        assert "correct_option" not in json.dumps(game)
         for index, question in enumerate(game["questions"]):
             with connect() as db:
-                correct = json.loads(
-                    db.execute(
-                        "SELECT correct_options_json FROM questions WHERE question_id=?",
+                row = db.execute(
+                        "SELECT correct_options_json,options_json FROM questions WHERE question_id=?",
                         (question["question_id"],),
-                    ).fetchone()[0]
-                )
+                    ).fetchone()
+                correct = json.loads(row["correct_options_json"])
+                canonical_options = json.loads(row["options_json"])
+            correct_text = canonical_options[correct[0] - 1]
+            chosen_token = next(
+                option["option_token"]
+                for option in question["options"]
+                if option["text"] == correct_text
+            )
             attempt = client.post(
                 f"/api/v1/game-sessions/{game['session_id']}/attempts",
                 json={
                     "event_id": f"real-course-e2e-attempt-{index}",
                     "question_id": question["question_id"],
-                    "chosen_options": correct,
+                    "chosen_option_tokens": [chosen_token],
                     "response_ms": 100 + index,
                 },
             )

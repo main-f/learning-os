@@ -76,6 +76,12 @@ CREATE TABLE IF NOT EXISTS questions (
     explanation TEXT,
     explanation_status TEXT NOT NULL DEFAULT 'pending_human_review'
         CHECK(explanation_status IN ('pending_human_review', 'verified')),
+    prompt_zh TEXT,
+    options_zh_json TEXT,
+    translation_status TEXT NOT NULL DEFAULT 'missing'
+        CHECK(translation_status IN ('missing', 'draft', 'human_verified')),
+    translation_version TEXT,
+    translation_reviewed_at TEXT,
     markdown_answer_value TEXT,
     learner_reasoning TEXT,
     content_hash TEXT NOT NULL,
@@ -113,6 +119,14 @@ CREATE TABLE IF NOT EXISTS game_sessions (
     status TEXT NOT NULL CHECK(status IN ('active', 'completed')),
     completion_event_id TEXT UNIQUE,
     completion_result_json TEXT,
+    shuffle_seed TEXT,
+    question_order_json TEXT,
+    option_orders_json TEXT,
+    assistance_mode TEXT NOT NULL DEFAULT 'none'
+        CHECK(assistance_mode IN ('none', 'zh_translation')),
+    time_multiplier REAL NOT NULL DEFAULT 1.0,
+    raw_duration_ms INTEGER CHECK(raw_duration_ms IS NULL OR raw_duration_ms >= 0),
+    ranked_duration_ms INTEGER CHECK(ranked_duration_ms IS NULL OR ranked_duration_ms >= 0),
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     FOREIGN KEY(question_set_id, question_set_version)
@@ -135,6 +149,12 @@ CREATE TABLE IF NOT EXISTS question_attempts (
     attempt_index INTEGER NOT NULL CHECK(attempt_index > 0),
     event_id TEXT NOT NULL UNIQUE,
     result_json TEXT NOT NULL,
+    chosen_option_tokens_json TEXT NOT NULL DEFAULT '[]',
+    presentation_order_json TEXT NOT NULL DEFAULT '[]',
+    assistance_mode TEXT NOT NULL DEFAULT 'none'
+        CHECK(assistance_mode IN ('none', 'zh_translation')),
+    evidence_mode TEXT NOT NULL DEFAULT 'unassisted'
+        CHECK(evidence_mode IN ('unassisted', 'assisted')),
     created_at TEXT NOT NULL,
     UNIQUE(session_id, question_id),
     UNIQUE(session_id, attempt_index)
@@ -216,6 +236,64 @@ def _upgrade_legacy_tables(db: sqlite3.Connection) -> None:
     )
 
 
+def _upgrade_game_feel_v2(db: sqlite3.Connection) -> None:
+    """Add ruleset-v2 presentation and assistance data without rewriting history."""
+
+    _add_column_if_missing(db, "questions", "prompt_zh", "TEXT")
+    _add_column_if_missing(db, "questions", "options_zh_json", "TEXT")
+    _add_column_if_missing(
+        db, "questions", "translation_status", "TEXT NOT NULL DEFAULT 'missing'"
+    )
+    _add_column_if_missing(db, "questions", "translation_version", "TEXT")
+    _add_column_if_missing(db, "questions", "translation_reviewed_at", "TEXT")
+
+    _add_column_if_missing(db, "game_sessions", "shuffle_seed", "TEXT")
+    _add_column_if_missing(db, "game_sessions", "question_order_json", "TEXT")
+    _add_column_if_missing(db, "game_sessions", "option_orders_json", "TEXT")
+    _add_column_if_missing(
+        db, "game_sessions", "assistance_mode", "TEXT NOT NULL DEFAULT 'none'"
+    )
+    _add_column_if_missing(
+        db, "game_sessions", "time_multiplier", "REAL NOT NULL DEFAULT 1.0"
+    )
+    _add_column_if_missing(db, "game_sessions", "raw_duration_ms", "INTEGER")
+    _add_column_if_missing(db, "game_sessions", "ranked_duration_ms", "INTEGER")
+
+    _add_column_if_missing(
+        db,
+        "question_attempts",
+        "chosen_option_tokens_json",
+        "TEXT NOT NULL DEFAULT '[]'",
+    )
+    _add_column_if_missing(
+        db,
+        "question_attempts",
+        "presentation_order_json",
+        "TEXT NOT NULL DEFAULT '[]'",
+    )
+    _add_column_if_missing(
+        db, "question_attempts", "assistance_mode", "TEXT NOT NULL DEFAULT 'none'"
+    )
+    _add_column_if_missing(
+        db, "question_attempts", "evidence_mode", "TEXT NOT NULL DEFAULT 'unassisted'"
+    )
+
+    # v1 sessions remain ruleset v1. These values only make their legacy timing
+    # explicit; they are never mixed into a ruleset-v2 Personal Best query.
+    db.execute(
+        """UPDATE game_sessions SET
+               raw_duration_ms=COALESCE(raw_duration_ms,duration_ms),
+               ranked_duration_ms=COALESCE(ranked_duration_ms,duration_ms),
+               assistance_mode=COALESCE(assistance_mode,'none'),
+               time_multiplier=COALESCE(time_multiplier,1.0)"""
+    )
+    db.execute(
+        """CREATE INDEX IF NOT EXISTS idx_game_sessions_ranked_leaderboard
+           ON game_sessions(question_set_id,question_set_version,ruleset_version,
+                            status,correct_count DESC,ranked_duration_ms ASC)"""
+    )
+
+
 def initialize() -> None:
     with connect() as db:
         db.execute(
@@ -239,4 +317,10 @@ def initialize() -> None:
             db.execute(
                 "INSERT INTO schema_migrations(version,name,applied_at) VALUES(?,?,?)",
                 (2, "upgrade_v01_columns", utc_now_iso()),
+            )
+        if 3 not in applied:
+            _upgrade_game_feel_v2(db)
+            db.execute(
+                "INSERT INTO schema_migrations(version,name,applied_at) VALUES(?,?,?)",
+                (3, "game_feel_ruleset_v2", utc_now_iso()),
             )

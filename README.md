@@ -53,6 +53,8 @@ npm run dev
 
 Open `http://127.0.0.1:5173/#/play` or `/#/dashboard`. Real prompts and answers are fetched from the local API; none are hardcoded in source or generated public assets.
 
+Ruleset v2 randomizes questions and options on the server, persists the presentation, and resumes the same active session after a refresh. Chinese assistance remains disabled until every active-set translation is explicitly human-reviewed. The private draft review pack lives under `services/study_core/data/reviews/` and is ignored by Git.
+
 ## 4. Verify
 
 ```bash
@@ -60,6 +62,7 @@ cd services/study_core
 COURSE_ROOT=/absolute/path/to/cybersecurity_codex .venv/bin/python -m pytest -q
 
 cd ../../apps/web
+npm test
 npm run build
 
 cd ../../services/study_core

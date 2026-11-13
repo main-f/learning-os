@@ -44,18 +44,37 @@ def audit_public_build(dist: Path, database: Path | None = None) -> dict[str, in
     if database is not None and database.is_file():
         db = sqlite3.connect(database)
         try:
-            rows = db.execute("SELECT question_id,prompt FROM questions").fetchall()
+            rows = db.execute(
+                """SELECT question_id,prompt,options_json,prompt_zh,options_zh_json
+                   FROM questions"""
+            ).fetchall()
         finally:
             db.close()
         checked_questions = len(rows)
-        for question_id, prompt in rows:
-            if not prompt:
-                continue
-            for path, text in text_payloads:
-                if prompt in text:
-                    violations.append(
-                        f"private question {question_id} in {path.relative_to(dist)}"
-                    )
+        for question_id, prompt, options_json, prompt_zh, options_zh_json in rows:
+            # Single-character/count options cannot be distinguished from ordinary
+            # bundle syntax. Prompts remain strict; option thresholds still catch
+            # meaningful copied course text without false positives such as "1".
+            private_strings = [prompt]
+            try:
+                private_strings.extend(
+                    item for item in json.loads(options_json or "[]") if len(item) >= 20
+                )
+                private_strings.extend(
+                    item for item in json.loads(options_zh_json or "[]") if len(item) >= 6
+                )
+            except (json.JSONDecodeError, TypeError):
+                violations.append(f"invalid private question data: {question_id}")
+            if prompt_zh:
+                private_strings.append(prompt_zh)
+            for private_text in private_strings:
+                if not isinstance(private_text, str) or not private_text:
+                    continue
+                for path, text in text_payloads:
+                    if private_text in text:
+                        violations.append(
+                            f"private question {question_id} in {path.relative_to(dist)}"
+                        )
     if violations:
         raise ValueError("Public build audit failed: " + "; ".join(sorted(set(violations))))
     return {"files_checked": len(files), "private_questions_checked": checked_questions}

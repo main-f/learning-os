@@ -16,6 +16,7 @@ class SyntheticCourse:
     root: Path
     correct_by_id: dict[str, int]
     prompts_by_id: dict[str, str]
+    options_by_id: dict[str, list[str]]
 
 
 def build_synthetic_course(root: Path, disputed_question_id: str | None = None) -> SyntheticCourse:
@@ -24,6 +25,7 @@ def build_synthetic_course(root: Path, disputed_question_id: str | None = None) 
     saved.mkdir(parents=True)
     correct_by_id: dict[str, int] = {}
     prompts_by_id: dict[str, str] = {}
+    options_by_id: dict[str, list[str]] = {}
     global_index = 0
 
     def topic(topic_id: str, count: int, with_html: bool) -> None:
@@ -38,6 +40,7 @@ def build_synthetic_course(root: Path, disputed_question_id: str | None = None) 
             global_index += 1
             correct_by_id[question_id] = correct
             prompts_by_id[question_id] = prompt
+            options_by_id[question_id] = options
             markdown.extend(
                 [
                     f"## Q{number}",
@@ -81,7 +84,7 @@ def build_synthetic_course(root: Path, disputed_question_id: str | None = None) 
     topic("01-1", 5, True)
     topic("01-2", 6, True)
     topic("01-3", 1, False)
-    return SyntheticCourse(root, correct_by_id, prompts_by_id)
+    return SyntheticCourse(root, correct_by_id, prompts_by_id, options_by_id)
 
 
 @pytest.fixture
