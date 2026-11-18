@@ -1,0 +1,74 @@
+name: Publish podcast player to Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/podcast-public/**'
+      - 'packages/podcast-playback/**'
+      - 'tools/podcast_publication.py'
+      - 'tools/fetch_podcast_release.py'
+      - 'tools/tests/**'
+      - '.github/workflows/podcast-pages.yml'
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Optional podcast-audio-YYYYMMDDTHHMMSSZ snapshot; blank selects latest'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: podcast-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/podcast-public/package-lock.json
+      - name: Test publication boundaries
+        run: python3 -m unittest discover -s tools/tests -v
+      - name: Install public player
+        working-directory: apps/podcast-public
+        run: npm ci
+      - name: Test and build public player
+        working-directory: apps/podcast-public
+        env:
+          PODCAST_BASE_PATH: /${{ github.event.repository.name }}/
+        run: |
+          npm test
+          npm run build
+      - name: Fetch approved audio snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          args=(--repository "$REPOSITORY" --output apps/podcast-public/dist)
+          if [ -n "$RELEASE_TAG" ]; then args+=(--tag "$RELEASE_TAG"); fi
+          python3 tools/fetch_podcast_release.py "${args[@]}"
+          python3 tools/podcast_publication.py audit --site apps/podcast-public/dist
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/podcast-public/dist
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy podcast player
+        id: deployment
+        uses: actions/deploy-pages@v5
