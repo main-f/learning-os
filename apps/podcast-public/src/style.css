@@ -12,7 +12,27 @@ a { color: var(--green); }
 .site-header { display: flex; align-items: center; justify-content: space-between; height: 92px; border-bottom: 1px solid var(--line); }
 .brand { display: flex; align-items: center; gap: 9px; font-size: 12px; font-weight: 800; letter-spacing: 1.5px; text-decoration: none; }
 .brand span { font-size: 23px; }
+.header-actions { display: flex; align-items: center; gap: 9px; }
 .edition { font-size: 12px; color: #537466; border: 1px solid var(--line); padding: 5px 14px; border-radius: 30px; }
+.relock { border: 0; background: transparent; color: #82988b; font-size: 10px; padding: 7px 4px; }
+.relock:hover { color: var(--green); }
+.gate-shell { min-height: 100svh; max-width: none; display: grid; place-items: center; padding: 34px 20px; background: radial-gradient(circle at 50% 20%,#fffef9 0,#f4f8f4 42%,#edf4ee 100%); }
+.gate-card { width: min(430px,100%); padding: 38px 42px 34px; background: #fffef9; border: 1px solid var(--line); border-radius: 24px; box-shadow: 0 20px 60px #204f3214; text-align: center; }
+.gate-brand { display: inline-flex; align-items: center; gap: 8px; color: var(--green); font-size: 10px; font-weight: 800; letter-spacing: 1.4px; text-decoration: none; }
+.gate-brand span { font-size: 20px; }
+.gate-mark { width: 92px; height: 92px; margin: 30px auto 24px; border: 1px solid #c8ddd0; border-radius: 50%; display: grid; place-items: center; color: #3d8a73; background: radial-gradient(circle,#edf5ed 34%,transparent 35%,transparent 54%,#e2ede3 55%,transparent 57%); }
+.gate-mark span { font-size: 39px; }
+.gate-card .eyebrow { margin-bottom: 8px; }
+.gate-card h1 { margin-bottom: 12px; font-size: 32px; letter-spacing: -1px; }
+.gate-copy { max-width: 320px; margin: 0 auto 24px; color: #748779; font-size: 12px; line-height: 1.8; }
+.gate-form { display: grid; gap: 9px; text-align: left; }
+.gate-form label { color: #5e7b6b; font-size: 10px; font-weight: 700; letter-spacing: .5px; }
+.gate-form input { width: 100%; min-height: 48px; border: 1px solid #cadccb; border-radius: 11px; padding: 10px 13px; background: #fbfdf9; color: #173a42; font: inherit; letter-spacing: 2px; }
+.gate-form input:focus { outline: 3px solid #9abfaf66; border-color: #6c9c87; }
+.gate-submit { min-height: 46px; justify-content: center; margin-top: 5px; }
+.gate-hint,.gate-message { min-height: 20px; margin: 13px 0 0; font-size: 10px; }
+.gate-hint { color: #98a89b; }
+.gate-message { color: #9a5b4d; }
 main { padding-top: 52px; padding-bottom: 30px; }
 main.has-player { padding-bottom: 220px; }
 .hero { display: flex; align-items: center; justify-content: space-between; gap: 30px; padding-bottom: 38px; }
@@ -75,6 +95,11 @@ audio { width: 100%; height: 42px; }
   .site-header { height: 74px; }
   .brand { font-size: 10px; letter-spacing: 1px; }
   .edition { font-size: 10px; padding: 4px 11px; }
+  .relock { font-size: 9px; }
+  .gate-shell { padding: 20px 16px; }
+  .gate-card { padding: 31px 24px 27px; border-radius: 20px; }
+  .gate-mark { width: 82px; height: 82px; margin: 24px auto 20px; }
+  .gate-card h1 { font-size: 28px; }
   main { padding-top: 33px; }
   main.has-player { padding-bottom: 290px; }
   .hero { gap: 12px; padding-bottom: 28px; }

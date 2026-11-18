@@ -2,6 +2,8 @@
 
 The user authorized the initial three supplied episodes for GitHub Releases/Pages on 2026-11-18. Public deployment is limited to this player, explicit catalog metadata and allowlisted audio derivatives. No question bank, answer history, source script, production prompt, SQLite file or credential is exported.
 
+The user later selected a lightweight client-side access-code curtain whose only goal is to avoid accidental visits during this short-lived personal use. The code is checked by digest in the browser and a matching digest is remembered in `localStorage`; changing the configured digest relocks existing browsers. This is not access control: direct static assets remain public, and no documentation or UI may claim otherwise.
+
 ## Initial delivery
 
 1. Bind each selected private source file by SHA-256 in a private publication allowlist. The allowlist stays outside Git. Successful generation or content review does not imply publication permission.

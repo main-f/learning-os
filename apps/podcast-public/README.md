@@ -6,6 +6,8 @@ Run npm ci, npm test and npm run build in this directory. PODCAST_BASE_PATH defa
 
 The catalog schema is validated in src/catalog.ts. Browser-local position and speed survive reopening and support intentional rewinds. No account, server-side progress synchronization or offline cache is claimed. Audio starts only after a click. Media Session actions are feature-detected; actual iPhone Safari lock-screen playback requires device acceptance.
 
+The landing screen has a lightweight client-side access-code curtain intended only to prevent accidental visits. It compares a SHA-256 digest and remembers the current digest in `localStorage`; the plaintext code is not stored by the app. This is deliberately not server-side access control, and direct static asset URLs remain public. Changing `ACCESS_DIGEST` automatically invalidates the remembered value from the previous code.
+
 The publisher creates a fresh snapshot containing at most 14 explicitly allowlisted episodes. Each file has an immutable SHA-256 name. A GitHub Release stores the audio and catalog; the Pages workflow verifies the snapshot, builds this app and publishes only dist. Audio never enters Git history.
 
 Publication tools and operational steps: ../../docs/PODCAST_PAGES.md from the repository root documentation. Google authentication/production are separate from publishing.

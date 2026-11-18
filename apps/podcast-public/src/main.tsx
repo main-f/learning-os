@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { audioTime, resumePosition } from '../../../packages/podcast-playback';
+import { forgetAccess, hasRememberedAccess, rememberAccess, verifyAccessCode } from './access';
 import {
   browserProgress, helsinkiDate, parseCatalog,
   type LocalProgress, type PublicCatalog, type PublicEpisode,
@@ -10,7 +11,7 @@ import './style.css';
 const base = new URL(import.meta.env.BASE_URL, window.location.origin);
 const assetUrl = (path: string) => new URL(path, base).href;
 
-function App() {
+function PodcastApp({ onLock }: { onLock: () => void }) {
   const [catalog, setCatalog] = useState<PublicCatalog | null>(null);
   const [selected, setSelected] = useState<PublicEpisode | null>(null);
   const [position, setPosition] = useState(0);
@@ -176,7 +177,8 @@ function App() {
   return <>
     <header className="site-header">
       <a className="brand" href="#/podcasts"><span aria-hidden="true">◈</span> RAE LEARNING OS</a>
-      <span className="edition">课程播客</span>
+      <div className="header-actions"><span className="edition">课程播客</span>
+        <button className="relock" type="button" onClick={onLock}>重新上锁</button></div>
     </header>
     <main className={selected ? 'has-player' : ''}>
       <section className="hero">
@@ -276,6 +278,59 @@ function App() {
         <button className="quiet" onClick={() => resolveConflict(true)}>保留当前位置</button></div>}
     </section>
   </>;
+}
+
+function AccessGate({ onUnlock }: { onUnlock: () => void }) {
+  const [code, setCode] = useState('');
+  const [checking, setChecking] = useState(false);
+  const [message, setMessage] = useState('');
+
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!code || checking) return;
+    setChecking(true);
+    const accepted = await verifyAccessCode(code);
+    if (accepted) {
+      rememberAccess(window.localStorage);
+      onUnlock();
+    } else {
+      setMessage('访问码不正确，请再试一次。');
+      setCode('');
+    }
+    setChecking(false);
+  }
+
+  return <main className="gate-shell">
+    <section className="gate-card" aria-labelledby="gate-title">
+      <a className="gate-brand" href={import.meta.env.BASE_URL}><span aria-hidden="true">◈</span> RAE LEARNING OS</a>
+      <div className="gate-mark" aria-hidden="true"><span>♫</span></div>
+      <p className="eyebrow">CYBER SECURITY · LEARNING RADIO</p>
+      <h1 id="gate-title">输入访问码</h1>
+      <p className="gate-copy">课程播客是一个安静的小空间。验证一次后，这个浏览器会替你记住。</p>
+      <form className="gate-form" onSubmit={(event) => void submit(event)}>
+        <label htmlFor="access-code">访问码</label>
+        <input id="access-code" name="password" type="password" value={code}
+          onChange={(event) => { setCode(event.target.value); setMessage(''); }}
+          autoComplete="current-password" autoCapitalize="none" spellCheck={false} autoFocus
+          aria-describedby={message ? 'gate-message' : 'gate-hint'} />
+        <button className="primary gate-submit" disabled={!code || checking}>
+          {checking ? '正在验证…' : '进入课程播客'}<span aria-hidden="true">↗</span>
+        </button>
+      </form>
+      {message
+        ? <p className="gate-message" id="gate-message" role="alert">{message}</p>
+        : <p className="gate-hint" id="gate-hint">同一浏览器通常只需输入一次。</p>}
+    </section>
+  </main>;
+}
+
+function App() {
+  const [unlocked, setUnlocked] = useState(() => hasRememberedAccess(window.localStorage));
+  if (!unlocked) return <AccessGate onUnlock={() => setUnlocked(true)} />;
+  return <PodcastApp onLock={() => {
+    forgetAccess(window.localStorage);
+    setUnlocked(false);
+  }} />;
 }
 
 createRoot(document.getElementById('root')!).render(<App />);
